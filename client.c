@@ -1,13 +1,3 @@
-/* This is the client part for sending one file through network stream socket 
- and waiting for its return.  
-This writer can run anywhere. 
-gcc writern.c -lsocket -lxnet
-clang and most gcc (like on osnodes) does not want any libraries included (there by default)
-explicit library calls are required depending on the OS.
-
-4/13/17: Writes from info from Command line. */
-
-
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <stdlib.h>
@@ -18,16 +8,7 @@ explicit library calls are required depending on the OS.
 #include <string.h>
 #include <unistd.h>
 
-#define IP_ADDR "10.247.53.97"   /* osnode16's IP address, where server 
-                                    must run */
 #define IP_ADDR_LOCAL "127.0.0.1"
-/* For test #define PORT_NUM 1150 */
-/* #define PORT_NUM 1050 */
-//#define PORT_NUM 1044
-//#define PORT_NUM 1050
-//#define PORT_NUM 1159
-//#define PORT_NUM 1051
-//#define PORT_NUM 1050
 #define PORT_NUM 10502
 #define BUFFLEN 100
 
