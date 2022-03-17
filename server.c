@@ -12,7 +12,7 @@
 
 #define IP_ADDR "10.247.53.97" 
 #define IP_ADDR_LOCAL "127.0.0.1"
-#define PORT_NUM 10502
+#define PORT_NUM 10501
 #define BUFFLEN 20
 #define MAX_CLIENTS 3
 
@@ -37,6 +37,7 @@ void *handle_client(void *arg) {
     fflush(stdout);
     pthread_mutex_lock(&mutex);
     write(0, buf, len);
+    sleep(2);
     write(conn, buf, len);
     pthread_mutex_unlock(&mutex);
     printf("\n");
@@ -56,6 +57,12 @@ int main()
   int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (sock == -1) {
     perror("cannot create socket");
+    exit(EXIT_FAILURE);
+  }
+
+  int on = 1;
+  if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0) {
+    perror("setsockopt() failed");
     exit(EXIT_FAILURE);
   }
 
