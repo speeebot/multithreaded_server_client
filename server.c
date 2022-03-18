@@ -9,51 +9,46 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 #define IP_ADDR_LOCAL "127.0.0.1"
-#define PORT_NUM 10501
+#define PORT_NUM 10502
 #define BUFFLEN 20
-#define MAX_CLIENTS 3
+#define NUM_CLIENTS 3
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
+sem_t sem;
 char buf[BUFFLEN];
 
 void *handle_client(void *arg) {
   int conn = *((int*)arg);
   int len;
 
-  if (conn == -1) {
-    perror("accept failed");
-    close(conn);
-    exit(EXIT_FAILURE);
-  }
-  pthread_mutex_lock(&mutex);
-  printf("client connected.\n");
-  
-  len = recv(conn, buf, BUFFLEN, 0);
-  if(len > 0) {
+  len = recv(conn, buf, BUFFLEN, 0); 
+  sem_wait(&sem);
+  if(len > 0) { 
     printf("Recieved: ");
     fflush(stdout);
     write(0, buf, len);
     sleep(2);
     write(conn, buf, len);
-    bzero(buf, BUFFLEN);
-    printf("\n");
-    pthread_mutex_unlock(&mutex);
   }
-
-  if (shutdown(conn, SHUT_RDWR) == -1) {
-    perror("shutdown failed");
+  else if(len == 0) {
     close(conn);
-    exit(EXIT_FAILURE);
+    return 0;
+  } 
+  else {
+    perror("recv() failed");
+    exit(EXIT_FAILURE); 
   }
+  sem_post(&sem);
   close(conn);
   return 0;
 }
 
 int main()
 {
+  int thread_num = 0, on = 1;
+  pthread_t tid[NUM_CLIENTS];
   struct sockaddr_in server_addr;
   int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (sock == -1) {
@@ -61,49 +56,50 @@ int main()
     exit(EXIT_FAILURE);
   }
 
-  int on = 1;
-  if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0) {
+  if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) == -1) {
     perror("setsockopt() failed");
     exit(EXIT_FAILURE);
   }
 
   memset(&server_addr, 0, sizeof(server_addr));
-
   server_addr.sin_family = AF_INET;
   server_addr.sin_port = htons(PORT_NUM);
   server_addr.sin_addr.s_addr = inet_addr(IP_ADDR_LOCAL);
 
   if (bind(sock,(struct sockaddr *)&server_addr, sizeof server_addr) == -1) {
     perror("bind failed");
-    close(sock);
     exit(EXIT_FAILURE);
   }
 
-  if (listen(sock, MAX_CLIENTS) == -1) {
+  if (listen(sock, NUM_CLIENTS) == -1) {
     perror("listen failed");
-    close(sock);
     exit(EXIT_FAILURE);
   }
   printf("listening...\n");
 
-  pthread_t tid[MAX_CLIENTS];
-  int thread_num = 0;
+  sem_init(&sem, 0, 1);
 
-  for (;;) {
+  for (;;) {  
     int conn = accept(sock, NULL, NULL);
-    if(pthread_create(&tid[thread_num++], NULL, handle_client, (void*)&conn) != 0) {
-      perror("thread creation failed\n");
+    if (conn == -1) {
+      perror("accept failed");
       exit(EXIT_FAILURE);
     }
 
-    if(thread_num >= 3) {
-      thread_num = 0;
-      while(thread_num < 3) {
-        pthread_join(tid[thread_num++], NULL);
-      }
+    printf("\nclient connected.\n");
+  
+    if(pthread_create(&tid[thread_num], NULL, handle_client, (void*)&conn) != 0) {
+      perror("thread creation failed\n");
+      exit(EXIT_FAILURE);
+    }   
+    
+    pthread_join(tid[thread_num], NULL);
+
+    thread_num++;
+    if(thread_num == NUM_CLIENTS)
       break;
-    }
   }
   close(sock);
+  sem_destroy(&sem);
   return EXIT_SUCCESS;  
 }
