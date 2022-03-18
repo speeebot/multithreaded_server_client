@@ -28,18 +28,19 @@ void *handle_client(void *arg) {
     close(conn);
     exit(EXIT_FAILURE);
   }
+  pthread_mutex_lock(&mutex);
   printf("client connected.\n");
-
+  
   len = recv(conn, buf, BUFFLEN, 0);
   if(len > 0) {
     printf("Recieved: ");
     fflush(stdout);
-    pthread_mutex_lock(&mutex);
     write(0, buf, len);
     sleep(2);
     write(conn, buf, len);
-    pthread_mutex_unlock(&mutex);
+    bzero(buf, BUFFLEN);
     printf("\n");
+    pthread_mutex_unlock(&mutex);
   }
 
   if (shutdown(conn, SHUT_RDWR) == -1) {
@@ -47,6 +48,7 @@ void *handle_client(void *arg) {
     close(conn);
     exit(EXIT_FAILURE);
   }
+  close(conn);
   return 0;
 }
 
