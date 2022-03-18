@@ -10,7 +10,6 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#define IP_ADDR "10.247.53.97" 
 #define IP_ADDR_LOCAL "127.0.0.1"
 #define PORT_NUM 10501
 #define BUFFLEN 20
